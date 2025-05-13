@@ -1,0 +1,61 @@
+/* Custom styles for Robots.txt Analyzer */
+
+/* Increase spacing for better readability */
+body {
+    line-height: 1.6;
+}
+
+/* Custom table styles */
+.table-responsive {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+/* Cursor for sortable headers */
+th.sortable {
+    cursor: pointer;
+}
+
+/* Rules list styling */
+ul.disallow-rules {
+    list-style-type: none;
+    padding-left: 0;
+    font-size: 0.9rem;
+}
+
+/* Make the textarea monospace */
+#urls {
+    font-family: monospace;
+}
+
+/* Robots.txt content display */
+#robotsContent {
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* Loading spinner sizing */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Add hover effect to table rows */
+.table-hover tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.075);
+}
+
+/* Ensure all icon sizes are consistent */
+.fas, .fa {
+    width: 16px;
+    text-align: center;
+}
+
+/* Ensure badge text is readable */
+.badge {
+    font-size: 0.8rem;
+    font-weight: normal;
+}
