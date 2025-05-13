@@ -1,0 +1,163 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h3 class="card-title"><i class="fas fa-search me-2"></i>Robots.txt Analyzer</h3>
+            </div>
+            <div class="card-body">
+                <p class="lead">
+                    This tool analyzes robots.txt files to check for Google crawler disallow rules. 
+                    Enter a list of websites (one per line) to check their robots.txt files.
+                </p>
+
+                <form method="POST" action="{{ url_for('analyze') }}" id="analyzeForm">
+                    <div class="form-group mb-3">
+                        <label for="urls">Websites to analyze (one per line):</label>
+                        <textarea 
+                            class="form-control" 
+                            id="urls" 
+                            name="urls" 
+                            rows="5" 
+                            placeholder="example.com&#10;google.com&#10;github.com"
+                            required
+                        >{{ urls_text|default('') }}</textarea>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                            <i class="fas fa-robot me-2"></i>Analyze Robots.txt Files
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if results %}
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center flex-wrap">
+                <h3 class="card-title mb-0"><i class="fas fa-list-alt me-2"></i>Analysis Results</h3>
+                <div class="d-flex gap-2 mt-md-0 mt-2">
+                    <div class="btn-group" role="group" aria-label="Filter options">
+                        <button type="button" class="btn btn-outline-light" id="showAll">All</button>
+                        <button type="button" class="btn btn-outline-light" id="showDisallowed">Disallowed</button>
+                        <button type="button" class="btn btn-outline-light" id="showAllowed">Allowed</button>
+                        <button type="button" class="btn btn-outline-light" id="showErrors">Errors</button>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-info dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-download me-1"></i> Export
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('export_results', format='csv') }}"><i class="fas fa-file-csv me-2"></i>CSV</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('export_results', format='json') }}"><i class="fas fa-file-code me-2"></i>JSON</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('export_results', format='txt') }}"><i class="fas fa-file-alt me-2"></i>Text</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="resultsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="sortable" data-sort="url">URL <i class="fas fa-sort ms-1"></i></th>
+                                <th class="sortable" data-sort="status">Status <i class="fas fa-sort ms-1"></i></th>
+                                <th class="sortable" data-sort="google">Google Allowed <i class="fas fa-sort ms-1"></i></th>
+                                <th>Disallow Rules</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results %}
+                            <tr class="result-row {% if result.google_disallowed %}disallowed{% elif result.status == 'error' %}error{% else %}allowed{% endif %}">
+                                <td>{{ result.url }}</td>
+                                <td>
+                                    {% if result.status == 'success' %}
+                                        <span class="badge bg-success">Success</span>
+                                    {% else %}
+                                        <span class="badge bg-danger" title="{{ result.error_message }}">Error</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if result.google_disallowed %}
+                                        <span class="badge bg-danger">Disallowed</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Allowed</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if result.disallow_rules %}
+                                        <ul class="disallow-rules mb-0">
+                                            {% for rule in result.disallow_rules[:3] %}
+                                                <li>
+                                                    <strong>{{ rule.agent }}:</strong> {{ rule.rule }}
+                                                </li>
+                                            {% endfor %}
+                                            {% if result.disallow_rules|length > 3 %}
+                                                <li class="text-muted">
+                                                    ...and {{ result.disallow_rules|length - 3 }} more
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    {% else %}
+                                        <span class="text-muted">No disallow rules for Google</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if result.status == 'success' %}
+                                        <button class="btn btn-sm btn-outline-info view-robots-btn" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#robotsModal"
+                                                data-url="{{ result.url }}"
+                                                data-content="{{ result.robots_content }}">
+                                            <i class="fas fa-file-alt"></i> View
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                <div class="row">
+                    <div class="col">
+                        <span class="results-count">
+                            <strong>{{ results|length }}</strong> websites analyzed
+                        </span>
+                    </div>
+                    <div class="col text-end">
+                        <span class="disallowed-count">
+                            <strong>{{ results|selectattr('google_disallowed', 'equalto', true)|list|length }}</strong> sites disallow Google
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal for displaying robots.txt content -->
+<div class="modal fade" id="robotsModal" tabindex="-1" aria-labelledby="robotsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="robotsModalLabel">Robots.txt for <span id="modalUrl"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="robotsContent" class="bg-dark text-light p-3 rounded"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
